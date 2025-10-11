@@ -1,32 +1,21 @@
 ﻿using ExpenseTracker.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using System.Reflection;
 
-namespace ExpenseTracker.Infrastructure.Data;
-
-public class AppDbContext: DbContext
+namespace ExpenseTracker.Infrastructure.Data
 {
-    public AppDbContext(DbContextOptions<AppDbContext> options)
-        : base(options) { }
-
-    public DbSet<User> Users => Set<User>();
-    public DbSet<Category> Categories => Set<Category>();
-    public DbSet<Transaction> Transactions => Set<Transaction>();
-
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    public class AppDbContext : DbContext
     {
-        base.OnModelCreating(modelBuilder);
+        public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
-        // Relationships
-        modelBuilder.Entity<Transaction>()
-            .HasOne(t => t.Category)
-            .WithMany(c => c.Transactions)
-            .HasForeignKey(t => t.CategoryId)
-            .OnDelete(DeleteBehavior.Cascade);
+        public DbSet<User> Users => Set<User>();
+        public DbSet<Category> Categories => Set<Category>();
+        public DbSet<Transaction> Transactions => Set<Transaction>();
 
-        modelBuilder.Entity<Transaction>()
-            .HasOne(t => t.User)
-            .WithMany(u => u.Transactions)
-            .HasForeignKey(t => t.UserId)
-            .OnDelete(DeleteBehavior.Cascade);
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+            modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
+        }
     }
 }
