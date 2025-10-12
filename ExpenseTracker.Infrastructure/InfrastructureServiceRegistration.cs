@@ -1,4 +1,7 @@
-﻿using ExpenseTracker.Infrastructure.Data;
+﻿using ExpenseTracker.Application.Interfaces;
+using ExpenseTracker.Application.Services;
+using ExpenseTracker.Infrastructure.Data;
+using ExpenseTracker.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,6 +16,13 @@ namespace ExpenseTracker.Infrastructure
         {
             services.AddDbContext<AppDbContext>(options =>
                 options.UseNpgsql(configuration.GetConnectionString("Postgres")));
+
+            services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
+            services.AddScoped<ITransactionRepository, TransactionRepository>();
+            services.AddScoped<ITransactionService, TransactionService>();
+            services.AddScoped<IUserRepository, UserRepository>();
+            services.AddScoped<IUserService, UserService>();
+
 
             return services;
         }

@@ -1,24 +1,19 @@
-﻿using ExpenseTracker.Domain.Entities;
-using ExpenseTracker.Domain.Enums;
+﻿using ExpenseTracker.Application.Interfaces;
+using ExpenseTracker.Domain.Entities;
 using ExpenseTracker.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
 namespace ExpenseTracker.Infrastructure.Repositories
 {
-    public class TransactionRepository : GenericRepository<Transaction>
+    public class TransactionRepository : Repository<Transaction>, ITransactionRepository
     {
-        private readonly AppDbContext _context;
+        public TransactionRepository(AppDbContext context) : base(context) { }
 
-        public TransactionRepository(AppDbContext context) : base(context)
+        public async Task<IEnumerable<Transaction>> GetUserTransactionsAsync(long userId)
         {
-            _context = context;
-        }
-
-        public async Task<IEnumerable<Transaction>> GetByTypeAsync(TransactionType type)
-        {
-            return await _context.Transactions
+            return await _dbSet
+                .Where(t => t.UserId == userId)
                 .Include(t => t.Category)
-                .Where(t => t.Type == type)
                 .ToListAsync();
         }
     }
