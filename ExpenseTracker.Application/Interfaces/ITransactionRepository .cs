@@ -1,9 +1,8 @@
 ﻿using ExpenseTracker.Domain.Entities;
 
-namespace ExpenseTracker.Application.Interfaces
+namespace ExpenseTracker.Application.Interfaces;
+
+public interface ITransactionRepository : IRepository<Transaction>
 {
-    public interface ITransactionRepository : IRepository<Transaction>
-    {
-        Task<IEnumerable<Transaction>> GetUserTransactionsAsync(long userId);
-    }
+    Task<IEnumerable<Transaction>> GetUserTransactionsAsync(long userId);
 }

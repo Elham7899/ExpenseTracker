@@ -20,6 +20,11 @@ namespace ExpenseTracker.Infrastructure.Data.Configurations
                    .WithOne(t => t.Category)
                    .HasForeignKey(t => t.CategoryId)
                    .OnDelete(DeleteBehavior.Cascade);
+
+            builder.HasOne(c => c.User)
+                   .WithMany(u => u.Categories) 
+                   .HasForeignKey(c => c.UserId)
+                   .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

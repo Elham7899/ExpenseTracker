@@ -1,12 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using ExpenseTracker.Domain.Entities;
 
-namespace ExpenseTracker.Application.Services
+namespace ExpenseTracker.Application.Services;
+
+public interface ICategoryService
 {
-    internal interface ICategoryService
-    {
-    }
+    Task<IEnumerable<Category>> GetAllCategoriesAsync();
+    Task<IEnumerable<Category>> GetUserCategoriesAsync(long userId);
+    Task<Category?> GetCategoryByIdAsync(long id);
+    Task AddCategoryAsync(Category category);
+    Task UpdateCategoryAsync(Category category);
+    Task DeleteCategoryAsync(long id);
 }

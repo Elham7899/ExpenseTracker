@@ -22,6 +22,8 @@ namespace ExpenseTracker.Infrastructure
             services.AddScoped<ITransactionService, TransactionService>();
             services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<IUserService, UserService>();
+            services.AddScoped<ICategoryRepository, CategoryRepository>();
+            services.AddScoped<ICategoryService, CategoryService>();
 
 
             return services;
