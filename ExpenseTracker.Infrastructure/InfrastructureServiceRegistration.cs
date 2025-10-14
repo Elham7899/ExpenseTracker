@@ -1,4 +1,5 @@
 ﻿using ExpenseTracker.Application.Interfaces;
+using ExpenseTracker.Application.Mapping;
 using ExpenseTracker.Application.Services;
 using ExpenseTracker.Infrastructure.Data;
 using ExpenseTracker.Infrastructure.Repositories;
@@ -24,7 +25,7 @@ namespace ExpenseTracker.Infrastructure
             services.AddScoped<IUserService, UserService>();
             services.AddScoped<ICategoryRepository, CategoryRepository>();
             services.AddScoped<ICategoryService, CategoryService>();
-
+            services.AddAutoMapper(typeof(MappingProfile));
 
             return services;
         }
