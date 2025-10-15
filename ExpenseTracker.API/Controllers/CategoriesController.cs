@@ -1,4 +1,6 @@
-﻿using ExpenseTracker.Application.Services;
+﻿using AutoMapper;
+using ExpenseTracker.Application.DTOs;
+using ExpenseTracker.Application.Services;
 using ExpenseTracker.Domain.Entities;
 using Microsoft.AspNetCore.Mvc;
 
@@ -6,13 +8,14 @@ namespace ExpenseTracker.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class CategoriesController(ICategoryService categoryService) : ControllerBase
+public class CategoriesController(ICategoryService categoryService,IMapper mapper) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
         var categories = await categoryService.GetAllCategoriesAsync();
-        return Ok(categories);
+        var categoriesDto = mapper.Map<IEnumerable<CategoryDto>>(categories);
+        return Ok(categoriesDto);
     }
 
     [HttpGet("{id}")]
@@ -20,26 +23,34 @@ public class CategoriesController(ICategoryService categoryService) : Controller
     {
         var category = await categoryService.GetCategoryByIdAsync(id);
         if (category == null) return NotFound();
-        return Ok(category);
+
+        var categoryDto = mapper.Map<CategoryDto>(category);
+        return Ok(categoryDto);
     }
 
     [HttpGet("user/{userId}")]
     public async Task<IActionResult> GetByUser(long userId)
     {
         var categories = await categoryService.GetUserCategoriesAsync(userId);
-        return Ok(categories);
+
+        var categoriesDto = mapper.Map<IEnumerable<CategoryDto>>(categories);
+        return Ok(categoriesDto);
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create(Category category)
+    public async Task<IActionResult> Create([FromBody]CategoryDto categoryDto)
     {
+        var category = mapper.Map<Category>(categoryDto);
+
         await categoryService.AddCategoryAsync(category);
-        return Ok(category);
+
+        return Ok(mapper.Map<CategoryDto>(category));
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> Update(long id, Category category)
+    public async Task<IActionResult> Update(long id,[FromBody] CategoryDto categoryDto)
     {
+        var category = mapper.Map<Category>(categoryDto);
         category.Id = id;
         await categoryService.UpdateCategoryAsync(category);
         return Ok();

@@ -2,6 +2,7 @@
 using ExpenseTracker.Application.DTOs;
 using ExpenseTracker.Application.Services;
 using ExpenseTracker.Domain.Entities;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ExpenseTracker.API.Controllers;
