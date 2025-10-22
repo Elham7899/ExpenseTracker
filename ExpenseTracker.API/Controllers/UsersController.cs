@@ -2,12 +2,14 @@
 using ExpenseTracker.Application.DTOs;
 using ExpenseTracker.Application.Services;
 using ExpenseTracker.Domain.Entities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ExpenseTracker.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class UsersController(IUserService userService, IMapper mapper) : ControllerBase
 {
     [HttpGet]

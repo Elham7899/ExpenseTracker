@@ -30,12 +30,13 @@ namespace ExpenseTracker.Infrastructure
             services.AddScoped<IUserService, UserService>();
             services.AddScoped<ICategoryRepository, CategoryRepository>();
             services.AddScoped<ICategoryService, CategoryService>();
+            services.AddScoped<IJwtService, JwtService>();
 
             // AutoMapper
             services.AddAutoMapper(typeof(MappingProfile));
 
             // JWT Authentication
-            var jwtKey = configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key is missing.");
+            var jwtKey = configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key is missing or empty. Please set it in appsettings.json.");
             var jwtIssuer = configuration["Jwt:Issuer"];
             var jwtAudience = configuration["Jwt:Audience"];
 

@@ -8,9 +8,16 @@ using Microsoft.EntityFrameworkCore;
 [Route("api/[controller]")]
 public class AuthController(IJwtService jwtService, AppDbContext context) : ControllerBase
 {
+    
     [HttpPost("register")]
     public async Task<IActionResult> Register(RegisterUserDto dto)
     {
+        var existingUser = await context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
+        if (existingUser != null)
+        {
+            return BadRequest(new { message = "A user with this email already exists." });
+        }
+
         var user = new User
         {
             UserName = dto.UserName,

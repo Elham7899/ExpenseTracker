@@ -7,31 +7,30 @@ using System.Text;
 
 public class JwtService : IJwtService
 {
-    private readonly IConfiguration _config;
+    private readonly IConfiguration _configuration;
 
-    public JwtService(IConfiguration config)
+    public JwtService(IConfiguration configuration)
     {
-        _config = config;
+        _configuration = configuration;
     }
 
     public string GenerateToken(User user)
     {
-        var claims = new List<Claim>
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]!));
+        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+        var claims = new[]
         {
-           new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-           new Claim(JwtRegisteredClaimNames.UniqueName, user.UserName),
-           new Claim(JwtRegisteredClaimNames.Email, user.Email)
+            new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()), // <— This is what your controller expects
+            new Claim(JwtRegisteredClaimNames.Email, user.Email),
+            new Claim("username", user.UserName)
         };
 
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]!));
-        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-        var expiry = DateTime.UtcNow.AddMinutes(Convert.ToDouble(_config["Jwt:DurationInMinutes"]));
-
         var token = new JwtSecurityToken(
-            issuer: _config["Jwt:Issuer"],
-            audience: _config["Jwt:Audience"],
+            issuer: _configuration["Jwt:Issuer"],
+            audience: _configuration["Jwt:Audience"],
             claims: claims,
-            expires: expiry,
+            expires: DateTime.UtcNow.AddDays(7),
             signingCredentials: creds
         );
 

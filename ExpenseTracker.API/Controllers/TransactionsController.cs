@@ -2,53 +2,79 @@
 using ExpenseTracker.Application.DTOs;
 using ExpenseTracker.Application.Services;
 using ExpenseTracker.Domain.Entities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace ExpenseTracker.API.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
-public class TransactionsController(ITransactionService transactionService, IMapper mapper) : ControllerBase
+public class TransactionsController : ControllerBase
 {
-    [HttpGet]
-    public async Task<IActionResult> GetAll()
+    private readonly ITransactionService _transactionService;
+    private readonly IMapper _mapper;
+
+    public TransactionsController(ITransactionService transactionService, IMapper mapper)
     {
-        var transactions = await transactionService.GetAllTransactionsAsync();
-        var transactionDtos = mapper.Map<IEnumerable<TransactionDto>>(transactions);
-        return Ok(transactionDtos);
+        _transactionService = transactionService;
+        _mapper = mapper;
     }
 
-    [HttpGet("user/{userId}")]
-    public async Task<IActionResult> GetByUser(long userId)
+    private long GetUserId()
     {
-        var transaction = await transactionService.GetUserTransactionsAsync(userId);
-        if (transaction == null) return NotFound();
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userIdClaim))
+            throw new UnauthorizedAccessException("User ID claim not found in token.");
 
-        var transactionDto = mapper.Map<TransactionDto>(transaction);
-        return Ok(transactionDto);
+        return long.Parse(userIdClaim);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetUserTransactions()
+    {
+        var userId = GetUserId();
+        var transactions = await _transactionService.GetUserTransactionsAsync(userId);
+        return Ok(_mapper.Map<IEnumerable<TransactionDto>>(transactions));
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create([FromBody] TransactionDto transactionDto)
+    public async Task<IActionResult> Create([FromBody] TransactionDto dto)
     {
-        var transaction = mapper.Map<Transaction>(transactionDto);
-        await transactionService.AddTransactionAsync(transaction);
-        return Ok(mapper.Map<TransactionDto>(transaction));
+        var userId = GetUserId();
+        var transaction = _mapper.Map<Transaction>(dto);
+        transaction.UserId = userId;
+
+        await _transactionService.AddTransactionAsync(transaction);
+        return Ok(_mapper.Map<TransactionDto>(transaction));
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> Update(long id, [FromBody] TransactionDto transactionDto)
+    public async Task<IActionResult> Update(long id, [FromBody] TransactionDto dto)
     {
-        var transaction = mapper.Map<Transaction>(transactionDto);
-        transaction.Id = id;
-        await transactionService.UpdateTransactionAsync(transaction);
-        return Ok();
+        var userId = GetUserId();
+        var transaction = await _transactionService.GetTransactionByIdAsync(id);
+
+        if (transaction == null || transaction.UserId != userId)
+            return NotFound("Transaction not found or unauthorized.");
+
+        _mapper.Map(dto, transaction);
+        await _transactionService.UpdateTransactionAsync(transaction);
+
+        return Ok("Transaction updated successfully.");
     }
 
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(long id)
     {
-        await transactionService.DeleteTransactionAsync(id);
+        var userId = GetUserId();
+        var transaction = await _transactionService.GetTransactionByIdAsync(id);
+
+        if (transaction == null || transaction.UserId != userId)
+            return NotFound("Transaction not found or unauthorized.");
+
+        await _transactionService.DeleteTransactionAsync(id);
         return NoContent();
     }
 }
