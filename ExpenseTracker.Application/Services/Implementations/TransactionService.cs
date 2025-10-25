@@ -1,4 +1,5 @@
-﻿using ExpenseTracker.Application.Interfaces;
+﻿using ExpenseTracker.Application.DTOs;
+using ExpenseTracker.Application.Interfaces;
 using ExpenseTracker.Domain.Entities;
 
 namespace ExpenseTracker.Application.Services;
@@ -42,4 +43,21 @@ public class TransactionService : ITransactionService
             await _transactionRepository.SaveChangesAsync();
         }
     }
+    public async Task<IEnumerable<CategorySummaryDto>> GetMonthlyCategorySummaryAsync(long userId, int year, int month)
+    {
+        var transactions = await _transactionRepository.GetUserTransactionsAsync(userId);
+        var monthlyTransactions = transactions
+            .Where(t => t.Date.Year == year && t.Date.Month == month);
+
+        var summary = monthlyTransactions
+            .GroupBy(t => t.Category!.Name)
+            .Select(g => new CategorySummaryDto
+            {
+                CategoryName = g.Key,
+                TotalAmount = g.Sum(t => t.Amount)
+            });
+
+        return summary;
+    }
+
 }
