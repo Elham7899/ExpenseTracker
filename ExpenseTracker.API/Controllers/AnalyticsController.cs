@@ -17,13 +17,27 @@ public class AnalyticsController : ControllerBase
         _transactionService = transactionService;
     }
 
-    private long GetUserId() => long.Parse(User.FindFirstValue("sub")!);
+    private long GetUserId()
+    {
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userIdClaim))
+            throw new UnauthorizedAccessException("User ID claim not found in token.");
+
+        return long.Parse(userIdClaim);
+    }
 
     [HttpGet("monthly-summary")]
     public async Task<IActionResult> GetMonthlySummary([FromQuery] int year, [FromQuery] int month)
     {
         var userId = GetUserId();
         var summary = await _transactionService.GetMonthlyCategorySummaryAsync(userId, year, month);
+        return Ok(summary);
+    }
+    [HttpGet("yearly-summary")]
+    public async Task<IActionResult> GetYearlySummary([FromQuery] int year)
+    {
+        var userId = long.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var summary = await _transactionService.GetYearlySummaryAsync(userId, year);
         return Ok(summary);
     }
 }

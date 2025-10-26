@@ -1,4 +1,4 @@
-﻿using ExpenseTracker.Application.DTOs;
+﻿using ExpenseTracker.Application.DTOs.Analytics;
 using ExpenseTracker.Application.Interfaces;
 using ExpenseTracker.Domain.Entities;
 
@@ -59,5 +59,24 @@ public class TransactionService : ITransactionService
 
         return summary;
     }
+    public async Task<YearlySummaryDto> GetYearlySummaryAsync(long userId, int year)
+    {
+        var transactions = await _transactionRepository.GetUserTransactionsAsync(userId);
+        var yearlyTransactions = transactions.Where(t => t.Date.Year == year);
 
+        var totalIncome = yearlyTransactions
+            .Where(t => t.Amount > 0)
+            .Sum(t => t.Amount);
+
+        var totalExpense = yearlyTransactions
+            .Where(t => t.Amount < 0)
+            .Sum(t => Math.Abs(t.Amount));
+
+        return new YearlySummaryDto
+        {
+            Year = year,
+            TotalIncome = totalIncome,
+            TotalExpense = totalExpense
+        };
+    }
 }

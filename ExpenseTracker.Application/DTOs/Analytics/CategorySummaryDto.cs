@@ -1,4 +1,4 @@
-﻿namespace ExpenseTracker.Application.DTOs;
+﻿namespace ExpenseTracker.Application.DTOs.Analytics;
 
 public class CategorySummaryDto
 {
