@@ -77,4 +77,32 @@ public class TransactionsController : ControllerBase
         await _transactionService.DeleteTransactionAsync(id);
         return NoContent();
     }
+
+    [HttpGet("paged")]
+    public async Task<IActionResult> GetPaged(
+    int page = 1, int pageSize = 10,
+    string? sortBy = "date", bool ascending = false,
+    string? category = null, DateTime? from = null, DateTime? to = null)
+    {
+        var userId = GetUserId();
+
+        var (transactions, totalCount) = await _transactionService.GetPagedUserTransactionsAsync(
+            userId, page, pageSize, sortBy, ascending, category, from, to);
+
+        var result = new
+        {
+            TotalCount = totalCount,
+            Page = page,
+            PageSize = pageSize,
+            Items = transactions.Select(t => new
+            {
+                t.Id,
+                t.Amount,
+                t.Date,
+                Category = t.Category?.Name
+            })
+        };
+
+        return Ok(result);
+    }
 }

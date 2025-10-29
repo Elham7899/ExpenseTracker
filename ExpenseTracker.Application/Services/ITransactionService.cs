@@ -1,4 +1,5 @@
 ﻿using ExpenseTracker.Application.DTOs.Analytics;
+using ExpenseTracker.Application.Interfaces;
 using ExpenseTracker.Domain.Entities;
 
 namespace ExpenseTracker.Application.Services;
@@ -12,5 +13,8 @@ public interface ITransactionService
     Task UpdateTransactionAsync(Transaction transaction);
     Task DeleteTransactionAsync(long id);
     Task<IEnumerable<CategorySummaryDto>> GetMonthlyCategorySummaryAsync(long userId, int year, int month);
+    Task<MonthlySummaryDto> GetMonthlySummaryAsync(long userId, int year, int month);
     Task<YearlySummaryDto> GetYearlySummaryAsync(long userId, int year);
+    Task<(IEnumerable<Transaction> Transactions, int TotalCount)> GetPagedUserTransactionsAsync(long userId, int page, int pageSize, string? sortBy, bool ascending, string? categoryFilter, DateTime? fromDate, DateTime? toDate);
+
 }

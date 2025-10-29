@@ -1,6 +1,7 @@
 ﻿using ExpenseTracker.Application.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 
 namespace ExpenseTracker.API.Controllers;
@@ -26,13 +27,22 @@ public class AnalyticsController : ControllerBase
         return long.Parse(userIdClaim);
     }
 
-    [HttpGet("monthly-summary")]
-    public async Task<IActionResult> GetMonthlySummary([FromQuery] int year, [FromQuery] int month)
+    [HttpGet("monthly-summaries")]
+    public async Task<IActionResult> GetMonthlySummaries([FromQuery] int year, [FromQuery] int month)
     {
         var userId = GetUserId();
         var summary = await _transactionService.GetMonthlyCategorySummaryAsync(userId, year, month);
         return Ok(summary);
     }
+
+    [HttpGet("monthly-summary")]
+    public async Task<IActionResult> GetMonthlySummary([FromQuery] int year, [FromQuery] int month)
+    {
+        var userId = GetUserId();
+        var summary = await _transactionService.GetMonthlySummaryAsync(userId, year, month);
+        return Ok(summary);
+    }
+
     [HttpGet("yearly-summary")]
     public async Task<IActionResult> GetYearlySummary([FromQuery] int year)
     {
