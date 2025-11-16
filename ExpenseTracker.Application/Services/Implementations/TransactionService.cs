@@ -1,16 +1,48 @@
 ﻿using ExpenseTracker.Application.DTOs.Analytics;
 using ExpenseTracker.Application.Interfaces;
 using ExpenseTracker.Domain.Entities;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace ExpenseTracker.Application.Services;
 
 public class TransactionService : ITransactionService
 {
     private readonly ITransactionRepository _transactionRepository;
+    private readonly IMemoryCache _cache;
 
-    public TransactionService(ITransactionRepository transactionRepository)
+    // Stores all cache keys per user for easy invalidation
+    private static readonly Dictionary<long, HashSet<string>> _userCacheKeys = new();
+
+    public TransactionService(ITransactionRepository transactionRepository, IMemoryCache cache)
     {
         _transactionRepository = transactionRepository;
+        _cache = cache;
+    }
+
+    private string GetCacheKey(string prefix, long userId, int year, int? month = null)
+    {
+        return month is null
+            ? $"{prefix}_{userId}_{year}"
+            : $"{prefix}_{userId}_{year}_{month}";
+    }
+
+    private void TrackKey(long userId, string cacheKey)
+    {
+        if (!_userCacheKeys.ContainsKey(userId))
+            _userCacheKeys[userId] = new HashSet<string>();
+
+        _userCacheKeys[userId].Add(cacheKey);
+    }
+
+    private void ClearUserAnalyticsCache(long userId)
+    {
+        if (_userCacheKeys.TryGetValue(userId, out var keys))
+        {
+            foreach (var key in keys)
+                _cache.Remove(key);
+
+            keys.Clear();
+        }
     }
 
     public async Task<IEnumerable<Transaction>> GetAllTransactionsAsync()
@@ -26,12 +58,14 @@ public class TransactionService : ITransactionService
     {
         await _transactionRepository.AddAsync(transaction);
         await _transactionRepository.SaveChangesAsync();
+        ClearUserAnalyticsCache(transaction.UserId);
     }
 
     public async Task UpdateTransactionAsync(Transaction transaction)
     {
         _transactionRepository.Update(transaction);
         await _transactionRepository.SaveChangesAsync();
+        ClearUserAnalyticsCache(transaction.UserId);
     }
 
     public async Task DeleteTransactionAsync(long id)
@@ -41,26 +75,42 @@ public class TransactionService : ITransactionService
         {
             _transactionRepository.Remove(transaction);
             await _transactionRepository.SaveChangesAsync();
+            ClearUserAnalyticsCache(transaction.UserId);
         }
     }
+
     public async Task<IEnumerable<CategorySummaryDto>> GetMonthlyCategorySummaryAsync(long userId, int year, int month)
     {
-        var transactions = await _transactionRepository.GetUserTransactionsAsync(userId);
-        var monthlyTransactions = transactions
-            .Where(t => t.Date.Year == year && t.Date.Month == month);
+        var cacheKey = GetCacheKey("MonthlyCategory", userId, year, month);
 
-        var summary = monthlyTransactions
+        if (_cache.TryGetValue(cacheKey, out IEnumerable<CategorySummaryDto>? cached))
+            return cached!;
+
+        var transactions = await _transactionRepository.GetUserTransactionsAsync(userId);
+
+        var summary = transactions
+            .Where(t => t.Date.Year == year && t.Date.Month == month)
             .GroupBy(t => t.Category!.Name)
             .Select(g => new CategorySummaryDto
             {
                 CategoryName = g.Key,
                 TotalAmount = g.Sum(t => t.Amount)
-            });
+            })
+            .ToList();
+
+        _cache.Set(cacheKey, summary, TimeSpan.FromMinutes(10));
+        TrackKey(userId, cacheKey);
 
         return summary;
     }
+
     public async Task<MonthlySummaryDto> GetMonthlySummaryAsync(long userId, int year, int month)
     {
+        var cacheKey = GetCacheKey("MonthlySummary", userId, year, month);
+
+        if (_cache.TryGetValue(cacheKey, out MonthlySummaryDto? cached))
+            return cached!;
+
         var transactions = await _transactionRepository.GetUserTransactionsAsync(userId);
 
         var monthly = transactions
@@ -80,51 +130,59 @@ public class TransactionService : ITransactionService
             .Take(3)
             .ToList();
 
-        // Compare with previous month
+        // Previous month
         var prevMonth = month == 1 ? 12 : month - 1;
         var prevYear = month == 1 ? year - 1 : year;
-        var prev = transactions.Where(t => t.Date.Year == prevYear && t.Date.Month == prevMonth);
-        var prevBalance = prev.Sum(t => t.Amount);
 
-        return new MonthlySummaryDto
+        var prev = transactions
+            .Where(t => t.Date.Year == prevYear && t.Date.Month == prevMonth)
+            .Sum(t => t.Amount);
+
+        var summary = new MonthlySummaryDto
         {
             Year = year,
             Month = month,
             TotalIncome = totalIncome,
             TotalExpense = totalExpense,
             TopCategories = topCategories,
-            PreviousMonthBalance = prevBalance
+            PreviousMonthBalance = prev
         };
+
+        _cache.Set(cacheKey, summary, TimeSpan.FromMinutes(10));
+        TrackKey(userId, cacheKey);
+
+        return summary;
     }
 
     public async Task<YearlySummaryDto> GetYearlySummaryAsync(long userId, int year)
     {
+        var cacheKey = GetCacheKey("YearlySummary", userId, year);
+
+        if (_cache.TryGetValue(cacheKey, out YearlySummaryDto? cached))
+            return cached!;
+
         var transactions = await _transactionRepository.GetUserTransactionsAsync(userId);
-        var yearlyTransactions = transactions.Where(t => t.Date.Year == year);
+        var yearly = transactions.Where(t => t.Date.Year == year);
 
-        var totalIncome = yearlyTransactions
-            .Where(t => t.Amount > 0)
-            .Sum(t => t.Amount);
-
-        var totalExpense = yearlyTransactions
-            .Where(t => t.Amount < 0)
-            .Sum(t => Math.Abs(t.Amount));
-
-        return new YearlySummaryDto
+        var summary = new YearlySummaryDto
         {
             Year = year,
-            TotalIncome = totalIncome,
-            TotalExpense = totalExpense
+            TotalIncome = yearly.Where(t => t.Amount > 0).Sum(t => t.Amount),
+            TotalExpense = yearly.Where(t => t.Amount < 0).Sum(t => Math.Abs(t.Amount))
         };
+
+        _cache.Set(cacheKey, summary, TimeSpan.FromMinutes(10));
+        TrackKey(userId, cacheKey);
+
+        return summary;
     }
 
-    public async Task<(IEnumerable<Transaction> Transactions, int TotalCount)> GetPagedUserTransactionsAsync
-        (long userId, int page, int pageSize,
-           string? sortBy, bool ascending,
-           string? categoryFilter, DateTime? fromDate, DateTime? toDate)
+    public async Task<(IEnumerable<Transaction> Transactions, int TotalCount)> GetPagedUserTransactionsAsync(
+        long userId, int page, int pageSize,
+        string? sortBy, bool ascending,
+        string? categoryFilter, DateTime? fromDate, DateTime? toDate)
     {
         return await _transactionRepository.GetPagedUserTransactionsAsync(
             userId, page, pageSize, sortBy, ascending, categoryFilter, fromDate, toDate);
     }
-
 }
