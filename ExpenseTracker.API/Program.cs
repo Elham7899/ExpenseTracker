@@ -1,7 +1,11 @@
+using ExpenseTracker.API.Extensions;
+using ExpenseTracker.API.Middleware;
 using ExpenseTracker.Infrastructure;
 using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.AddSerilogLogging();
 
 builder.Services.AddMemoryCache();
 // Add services to the container.
@@ -51,6 +55,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 app.UseAuthentication();
 app.UseAuthorization();
