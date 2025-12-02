@@ -2,6 +2,7 @@
 using ExpenseTracker.Application.Interfaces;
 using ExpenseTracker.Domain.Entities;
 using Microsoft.Extensions.Caching.Memory;
+using System.Collections.Concurrent;
 
 namespace ExpenseTracker.Application.Services;
 
@@ -10,8 +11,7 @@ public class TransactionService : ITransactionService
     private readonly ITransactionRepository _transactionRepository;
     private readonly IMemoryCache _cache;
 
-    // Stores all cache keys per user for easy invalidation
-    private static readonly Dictionary<long, HashSet<string>> _userCacheKeys = new();
+    private readonly ConcurrentDictionary<long, ConcurrentBag<string>> _userCacheKeys = new();
 
     public TransactionService(ITransactionRepository transactionRepository, IMemoryCache cache)
     {
@@ -28,20 +28,16 @@ public class TransactionService : ITransactionService
 
     private void TrackKey(long userId, string cacheKey)
     {
-        if (!_userCacheKeys.ContainsKey(userId))
-            _userCacheKeys[userId] = new HashSet<string>();
-
-        _userCacheKeys[userId].Add(cacheKey);
+        var bag = _userCacheKeys.GetOrAdd(userId, _ => new ConcurrentBag<string>());
+        bag.Add(cacheKey);
     }
 
     private void ClearUserAnalyticsCache(long userId)
     {
-        if (_userCacheKeys.TryGetValue(userId, out var keys))
+        if (_userCacheKeys.TryRemove(userId, out var keys))
         {
             foreach (var key in keys)
                 _cache.Remove(key);
-
-            keys.Clear();
         }
     }
 

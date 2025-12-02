@@ -1,7 +1,9 @@
+using ExpenseTracker.API.Filters;
 using ExpenseTracker.API.Middleware;
 using ExpenseTracker.Infrastructure;
 using FluentValidation;
 using FluentValidation.AspNetCore;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.OpenApi.Models;
 using Serilog;
 
@@ -33,6 +35,13 @@ try
     builder.Services.AddControllers();
     builder.Services.AddFluentValidationAutoValidation();
     builder.Services.AddValidatorsFromAssemblyContaining<TransactionDtoValidator>();
+
+    builder.Services.Configure<ApiBehaviorOptions>(options =>
+    {
+        options.InvalidModelStateResponseFactory = context =>
+            ValidationFailedResponseFactory.Create(context.ModelState);
+    });
+    
 
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen(c =>
