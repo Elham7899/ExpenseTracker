@@ -17,27 +17,29 @@ public class UsersController(IUserService userService, IMapper mapper) : Control
     {
         var users = await userService.GetAllUsersAsync();
         var usersDto = mapper.Map<IEnumerable<UserDto>>(users);
-        return Ok(usersDto);
+
+        return Ok(new ApiResponse<IEnumerable<UserDto>>(usersDto));
     }
 
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(long id)
     {
         var user = await userService.GetUserByIdAsync(id);
-        if (user == null) return NotFound();
+        if (user == null)
+            return NotFound(ApiResponse<UserDto>.Fail("User not found"));
 
         var userDto = mapper.Map<UserDto>(user);
-        return Ok(userDto);
+        return Ok(new ApiResponse<UserDto>(userDto));
     }
 
     [HttpGet("email/{email}")]
     public async Task<IActionResult> GetByEmail(string email)
     {
         var user = await userService.GetUserByEmailAsync(email);
-        if (user == null) return NotFound();
+        if (user == null)
+            return NotFound(ApiResponse<UserDto>.Fail("User not found"));
 
-        var userDto = mapper.Map<UserDto>(user);
-        return Ok(userDto);
+        return Ok(new ApiResponse<UserDto>(mapper.Map<UserDto>(user)));
     }
 
     [HttpPost]
@@ -46,7 +48,11 @@ public class UsersController(IUserService userService, IMapper mapper) : Control
         var user = mapper.Map<User>(userDto);
 
         await userService.AddUserAsync(user);
-        return Ok(mapper.Map<UserDto>(user));
+
+        return Ok(new ApiResponse<UserDto>(
+            mapper.Map<UserDto>(user),
+            "User created successfully."
+        ));
     }
 
     [HttpPut("{id}")]
@@ -56,13 +62,14 @@ public class UsersController(IUserService userService, IMapper mapper) : Control
         user.Id = id;
 
         await userService.UpdateUserAsync(user);
-        return Ok();
+
+        return Ok(new ApiResponse<string>("User updated successfully."));
     }
 
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(long id)
     {
         await userService.DeleteUserAsync(id);
-        return NoContent();
+        return Ok(new ApiResponse<string>("User deleted successfully."));
     }
 }

@@ -23,40 +23,25 @@ public class TransactionsController : ControllerBase
         _mapper = mapper;
     }
 
-    /// <summary>
-    /// Extracts the logged-in user ID from the JWT token.
-    /// </summary>
-    /// <returns>User ID as long</returns>
-    /// <exception cref="UnauthorizedAccessException"></exception>
     private long GetUserId()
     {
-        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-
-        if (string.IsNullOrWhiteSpace(userIdClaim))
-            throw new UnauthorizedAccessException("User ID claim not found in token.");
-
-        return long.Parse(userIdClaim);
+        var claim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (claim == null) throw new UnauthorizedAccessException("User ID not found");
+        return long.Parse(claim);
     }
 
-    /// <summary>
-    /// Retrieves all transactions belonging to the authenticated user.
-    /// </summary>
     [HttpGet]
-    [ProducesResponseType(typeof(IEnumerable<TransactionDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetAll()
     {
         var userId = GetUserId();
         var transactions = await _transactionService.GetUserTransactionsAsync(userId);
-        return Ok(_mapper.Map<IEnumerable<TransactionDto>>(transactions));
+
+        return Ok(new ApiResponse<IEnumerable<TransactionDto>>(
+            _mapper.Map<IEnumerable<TransactionDto>>(transactions)
+        ));
     }
 
-    /// <summary>
-    /// Creates a new transaction for the authenticated user.
-    /// </summary>
     [HttpPost]
-    [ProducesResponseType(typeof(TransactionDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Create([FromBody] TransactionDto dto)
     {
         var userId = GetUserId();
@@ -66,56 +51,42 @@ public class TransactionsController : ControllerBase
 
         await _transactionService.AddTransactionAsync(transaction);
 
-        return Ok(_mapper.Map<TransactionDto>(transaction));
+        return Ok(new ApiResponse<TransactionDto>(
+            _mapper.Map<TransactionDto>(transaction),
+            "Transaction created successfully."
+        ));
     }
 
-    /// <summary>
-    /// Updates a specific transaction if it belongs to the authenticated user.
-    /// </summary>
     [HttpPut("{id}")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Update(long id, [FromBody] TransactionDto dto)
     {
         var userId = GetUserId();
         var transaction = await _transactionService.GetTransactionByIdAsync(id);
 
         if (transaction == null || transaction.UserId != userId)
-            return NotFound("Transaction not found or unauthorized.");
+            return NotFound(ApiResponse<string>.Fail("Transaction not found or unauthorized."));
 
         _mapper.Map(dto, transaction);
         await _transactionService.UpdateTransactionAsync(transaction);
 
-        return Ok("Transaction updated successfully.");
+        return Ok(new ApiResponse<string>("Transaction updated successfully."));
     }
 
-    /// <summary>
-    /// Deletes a specific transaction if it belongs to the authenticated user.
-    /// </summary>
     [HttpDelete("{id}")]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Delete(long id)
     {
         var userId = GetUserId();
         var transaction = await _transactionService.GetTransactionByIdAsync(id);
 
         if (transaction == null || transaction.UserId != userId)
-            return NotFound("Transaction not found or unauthorized.");
+            return NotFound(ApiResponse<string>.Fail("Transaction not found or unauthorized."));
 
         await _transactionService.DeleteTransactionAsync(id);
-        return NoContent();
+
+        return Ok(new ApiResponse<string>("Transaction deleted successfully."));
     }
 
-    /// <summary>
-    /// Retrieves a paginated, filtered, and sorted list of user transactions.
-    /// Supports filtering by date range and category, and sorting by amount or date.
-    /// </summary>
     [HttpGet("paged")]
-    [ProducesResponseType(typeof(PagedResult<TransactionDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetPaged(
         int page = 1,
         int pageSize = 10,
@@ -138,6 +109,6 @@ public class TransactionsController : ControllerBase
             Items = _mapper.Map<IEnumerable<TransactionDto>>(transactions)
         };
 
-        return Ok(result);
+        return Ok(new ApiResponse<PagedResult<TransactionDto>>(result));
     }
 }
