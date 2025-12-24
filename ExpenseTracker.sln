@@ -16,6 +16,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		.gitignore = .gitignore
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ExpenseTracker.Application.Tests", "ExpenseTracker.Application.Tests\ExpenseTracker.Application.Tests.csproj", "{28592396-4F6A-41AB-8E3F-5E2A4A2994F6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -38,6 +40,10 @@ Global
 		{A583F269-A616-4ED1-B53A-D62ED495F7D9}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A583F269-A616-4ED1-B53A-D62ED495F7D9}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A583F269-A616-4ED1-B53A-D62ED495F7D9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{28592396-4F6A-41AB-8E3F-5E2A4A2994F6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{28592396-4F6A-41AB-8E3F-5E2A4A2994F6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{28592396-4F6A-41AB-8E3F-5E2A4A2994F6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{28592396-4F6A-41AB-8E3F-5E2A4A2994F6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
